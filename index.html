@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Uncalled README Viewer</title>
+  <title>Uncalled README & Downloads Viewer</n>
   <style>
     body {
       background-color: #000;
@@ -12,9 +12,7 @@
       padding: 2rem;
       line-height: 1.6;
     }
-    a {
-      color: #00aaff;
-    }
+    a { color: #00aaff; }
     h1, h2, h3, h4, h5, h6 {
       color: #00aaff;
       margin-top: 1.5em;
@@ -44,33 +42,81 @@
       border-radius: 4px;
       color: #ff5555;
     }
+    #downloads {
+      margin-top: 2rem;
+    }
+    .download-btn {
+      background-color: #00aaff;
+      color: #fff;
+      padding: 0.5em 1em;
+      border: none;
+      border-radius: 4px;
+      margin: 0.5em;
+      cursor: pointer;
+    }
+    .download-btn:hover {
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body>
   <div id="content">Loading Uncalled README...</div>
   <div id="error" class="error" style="display:none;"></div>
+  <div id="downloads"></div>
 
-  <!-- Correct UMD build of Marked.js for Markdown parsing -->
+  <!-- Dependencies -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script>
+    const owner = 'tzarbomba64';
+    const repo = 'Uncalled';
+    const branch = 'main';
+    const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`;
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/list?ref=${branch}`;
+
     const contentEl = document.getElementById('content');
     const errorEl = document.getElementById('error');
-    const readmeUrl = 'https://raw.githubusercontent.com/tzarbomba64/Uncalled/main/README.md';
+    const downloadsEl = document.getElementById('downloads');
 
+    // Load README
     fetch(readmeUrl)
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.text();
-      })
-      .then(text => {
-        // Use marked.parse() on the global marked object
-        contentEl.innerHTML = marked.parse(text);
-      })
+      .then(res => { if (!res.ok) throw new Error(res.status); return res.text(); })
+      .then(md => { contentEl.innerHTML = marked.parse(md); })
       .catch(err => {
         errorEl.style.display = 'block';
-        errorEl.textContent = 'Failed to load README.md from GitHub: ' + err.message;
+        errorEl.textContent = 'Failed to load README.md: ' + err.message;
         console.error(err);
       });
+
+    // Fetch list folder contents and create download buttons
+    fetch(apiUrl)
+      .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
+      .then(files => {
+        files.filter(f => f.type === 'file').forEach(file => {
+          const btn = document.createElement('button');
+          const baseName = file.name.split('.').slice(0, -1).join('.') || file.name;
+          btn.textContent = `Download ${baseName}.zip`;
+          btn.className = 'download-btn';
+
+          btn.addEventListener('click', () => {
+            const zip = new JSZip();
+            fetch(file.download_url)
+              .then(res => res.blob())
+              .then(blob => {
+                zip.file(file.name, blob);
+                return zip.generateAsync({ type: 'blob' });
+              })
+              .then(zipped => {
+                saveAs(zipped, `${baseName}.zip`);
+              })
+              .catch(e => console.error('Zip error', e));
+          });
+
+          downloadsEl.appendChild(btn);
+        });
+      })
+      .catch(err => console.error('Failed to list folder:', err));
   </script>
 </body>
 </html>
