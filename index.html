@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>README Viewer</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: sans-serif;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    a {
+      color: #00aaff;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      color: #00aaff;
+      margin-top: 1.5em;
+    }
+    blockquote {
+      border-left: 4px solid #00aaff;
+      padding-left: 1rem;
+      color: #ccc;
+    }
+    code {
+      background-color: #111;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      color: #00ffcc;
+    }
+    pre {
+      background-color: #111;
+      padding: 1em;
+      border-radius: 4px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="content">Loading README...</div>
+
+  <!-- Marked.js for Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    fetch('README.md')
+      .then(response => response.text())
+      .then(text => {
+        document.getElementById('content').innerHTML = marked(text);
+      })
+      .catch(err => {
+        document.getElementById('content').textContent = 'Failed to load README.md';
+        console.error(err);
+      });
+  </script>
+</body>
+</html>
