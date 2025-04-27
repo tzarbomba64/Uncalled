@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Uncalled README & Downloads Viewer</n>
+  <title>Uncalled README & Downloads Viewer</title>
   <style>
     body {
       background-color: #000;
@@ -65,58 +65,69 @@
   <div id="downloads"></div>
 
   <!-- Dependencies -->
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script>
-    const owner = 'tzarbomba64';
-    const repo = 'Uncalled';
-    const branch = 'main';
-    const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`;
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/list?ref=${branch}`;
+    document.addEventListener('DOMContentLoaded', () => {
+      const owner = 'tzarbomba64';
+      const repo = 'Uncalled';
+      const branch = 'main';
+      const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`;
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/list?ref=${branch}`;
 
-    const contentEl = document.getElementById('content');
-    const errorEl = document.getElementById('error');
-    const downloadsEl = document.getElementById('downloads');
+      const contentEl = document.getElementById('content');
+      const errorEl = document.getElementById('error');
+      const downloadsEl = document.getElementById('downloads');
 
-    // Load README
-    fetch(readmeUrl)
-      .then(res => { if (!res.ok) throw new Error(res.status); return res.text(); })
-      .then(md => { contentEl.innerHTML = marked.parse(md); })
-      .catch(err => {
-        errorEl.style.display = 'block';
-        errorEl.textContent = 'Failed to load README.md: ' + err.message;
-        console.error(err);
-      });
-
-    // Fetch list folder contents and create download buttons
-    fetch(apiUrl)
-      .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
-      .then(files => {
-        files.filter(f => f.type === 'file').forEach(file => {
-          const btn = document.createElement('button');
-          const baseName = file.name.split('.').slice(0, -1).join('.') || file.name;
-          btn.textContent = `Download ${baseName}.zip`;
-          btn.className = 'download-btn';
-
-          btn.addEventListener('click', () => {
-            const zip = new JSZip();
-            fetch(file.download_url)
-              .then(res => res.blob())
-              .then(blob => {
-                zip.file(file.name, blob);
-                return zip.generateAsync({ type: 'blob' });
-              })
-              .then(zipped => {
-                saveAs(zipped, `${baseName}.zip`);
-              })
-              .catch(e => console.error('Zip error', e));
-          });
-
-          downloadsEl.appendChild(btn);
+      // Load README
+      fetch(readmeUrl)
+        .then(res => { if (!res.ok) throw new Error(res.status); return res.text(); })
+        .then(md => { contentEl.innerHTML = marked.parse(md); })
+        .catch(err => {
+          errorEl.style.display = 'block';
+          errorEl.textContent = 'Failed to load README.md: ' + err.message;
+          console.error('README load error:', err);
         });
-      })
-      .catch(err => console.error('Failed to list folder:', err));
+
+      // Fetch list folder contents and create download buttons
+      fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } })
+        .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
+        .then(files => {
+          if (!Array.isArray(files) || files.length === 0) {
+            downloadsEl.innerHTML = '<p>No files found in the <code>list</code> folder.</p>';
+            return;
+          }
+          files.filter(f => f.type === 'file').forEach(file => {
+            const btn = document.createElement('button');
+            const baseName = file.name.replace(/\.[^/.]+$/, '');
+            btn.textContent = `Download ${baseName}.zip`;
+            btn.className = 'download-btn';
+
+            btn.addEventListener('click', () => {
+              const zip = new JSZip();
+              fetch(file.download_url)
+                .then(res => res.blob())
+                .then(blob => {
+                  zip.file(file.name, blob);
+                  return zip.generateAsync({ type: 'blob' });
+                })
+                .then(zipped => {
+                  saveAs(zipped, `${baseName}.zip`);
+                })
+                .catch(e => console.error('Zip error:', e));
+            });
+
+            downloadsEl.appendChild(btn);
+          });
+        })
+        .catch(err => {
+          console.error('Failed to list folder:', err);
+          const msg = document.createElement('p');
+          msg.textContent = 'Could not retrieve download list.';
+          downloadsEl.appendChild(msg);
+        });
+    });
   </script>
 </body>
 </html>
