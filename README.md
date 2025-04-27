@@ -3,6 +3,8 @@
 What is Uncalled?
  Uncalled is a python-based application that blocks 'Windows Recall', MUST RUN AS ADMININSTRATOR!
 
+ Quick warning: Due to the fact Uncalled has registry access, it is likely to be nuked from orbit by windows defender.
+
  Recommendations: Back up your windows registry before using this, as it may corrupt your registry in some cases!
  
  # How to use Uncalled
