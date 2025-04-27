@@ -16,6 +16,6 @@ What is Uncalled?
 
 Blocker will now update certain settings to disable 'Windows Recall'!
 
-#Files
+# Files
 
 https://github.com/tzarbomba64/Uncalled/tree/main/Uncalled
