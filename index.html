@@ -50,8 +50,8 @@
   <div id="content">Loading Uncalled README...</div>
   <div id="error" class="error" style="display:none;"></div>
 
-  <!-- Marked.js for Markdown parsing (UMD build) -->
-  <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/lib/marked.min.js"></script>
+  <!-- Correct UMD build of Marked.js for Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     const contentEl = document.getElementById('content');
     const errorEl = document.getElementById('error');
@@ -63,7 +63,7 @@
         return response.text();
       })
       .then(text => {
-        // Use parse() since marked() global may not be a function
+        // Use marked.parse() on the global marked object
         contentEl.innerHTML = marked.parse(text);
       })
       .catch(err => {
@@ -74,7 +74,3 @@
   </script>
 </body>
 </html>
-
-session = [1234567890qwertyuiopasdfghjklzxcvbnm_]
-{session}
-
