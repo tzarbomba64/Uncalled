@@ -27,6 +27,12 @@
       height: 20px;
       margin-right: 10px;
     }
+    #downloads, #windows-installer {
+      margin-top: 20px;
+    }
+    #windows-installer {
+      margin-top: 100px; /* send it to the abyss */
+    }
     .error {
       margin-top: 20px;
       padding: 10px;
@@ -44,6 +50,8 @@
   <h2>Downloads</h2>
   <div id="downloads"></div>
 
+  <div id="windows-installer"></div>
+
   <div id="error" class="error" style="display:none;"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -54,7 +62,7 @@
     const branch = 'main';
     const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`;
     const listApiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/list?ref=${branch}`;
-    const winLogoUrl = 'https://i.postimg.cc/2jJkfTC9/download.png'; // your custom windows logo
+    const winLogoUrl = 'https://i.postimg.cc/2jJkfTC9/download.png'; // custom logo
 
     function showError(msg) {
       const errorBox = document.getElementById('error');
@@ -77,6 +85,7 @@
         .then(res => res.json())
         .then(files => {
           const downloadsDiv = document.getElementById('downloads');
+          const winInstallerDiv = document.getElementById('windows-installer');
           const normalFiles = [];
           let baseFile = null;
 
@@ -96,7 +105,7 @@
 
           if (baseFile) {
             const baseBtn = createWindowsInstallerButton(baseFile);
-            downloadsDiv.appendChild(baseBtn);
+            winInstallerDiv.appendChild(baseBtn);
           }
         })
         .catch(() => showError('Failed to load downloads.'));
@@ -133,10 +142,8 @@
           const url = URL.createObjectURL(zipBlob);
           const a = document.createElement('a');
           a.href = url;
-
-          const cleanName = file.name.replace(/\.[^/.]+$/, ''); // remove extension
-          a.download = `${cleanName}.zip`; // always a .zip
-
+          const cleanName = file.name.replace(/\.[^/.]+$/, '');
+          a.download = `${cleanName}.zip`;
           document.body.appendChild(a);
           a.click();
           a.remove();
