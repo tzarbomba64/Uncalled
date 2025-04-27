@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>README Viewer</title>
+  <title>Uncalled README Viewer</title>
   <style>
     body {
       background-color: #000;
@@ -36,21 +36,38 @@
       border-radius: 4px;
       overflow: auto;
     }
+    .error {
+      margin-top: 2rem;
+      padding: 1rem;
+      background-color: #330000;
+      border: 1px solid #ff0000;
+      border-radius: 4px;
+      color: #ff5555;
+    }
   </style>
 </head>
 <body>
-  <div id="content">Loading README...</div>
+  <div id="content">Loading Uncalled README...</div>
+  <div id="error" class="error" style="display:none;"></div>
 
   <!-- Marked.js for Markdown parsing -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
-    fetch('README.md')
-      .then(response => response.text())
+    const contentEl = document.getElementById('content');
+    const errorEl = document.getElementById('error');
+    const readmeUrl = 'https://raw.githubusercontent.com/tzarbomba64/Uncalled/main/README.md';
+
+    fetch(readmeUrl)
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      })
       .then(text => {
-        document.getElementById('content').innerHTML = marked(text);
+        contentEl.innerHTML = marked(text);
       })
       .catch(err => {
-        document.getElementById('content').textContent = 'Failed to load README.md';
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'Failed to load README.md from GitHub: ' + err.message;
         console.error(err);
       });
   </script>
