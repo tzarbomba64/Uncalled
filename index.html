@@ -16,7 +16,7 @@
       color: white;
       border: none;
       padding: 10px 20px;
-      margin: 10px 0;
+      margin: 10px 10px 0 0;
       border-radius: 5px;
       cursor: pointer;
       font-size: 1rem;
@@ -54,7 +54,7 @@
     const branch = 'main';
     const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`;
     const listApiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/list?ref=${branch}`;
-    const winLogoUrl = 'https://upload.wikimedia.org/wikipedia/commons/8/8f/Windows_11_logo.svg';
+    const winLogoUrl = 'https://i.postimg.cc/2jJkfTC9/download.png'; // your custom windows logo
 
     function showError(msg) {
       const errorBox = document.getElementById('error');
@@ -76,23 +76,46 @@
       fetch(listApiUrl)
         .then(res => res.json())
         .then(files => {
-          files.forEach(file => {
-            const btn = document.createElement('button');
-            btn.className = 'download-btn';
+          const downloadsDiv = document.getElementById('downloads');
+          const normalFiles = [];
+          let baseFile = null;
 
+          files.forEach(file => {
             const cleanName = file.name.toLowerCase();
             if (cleanName === 'base' || cleanName === 'base.zip') {
-              btn.innerHTML = `<img src="${winLogoUrl}" alt="Windows 11">Download Windows installer`;
+              baseFile = file;
             } else {
-              const label = file.name.replace(/\.[^/.]+$/, ''); // remove extension
-              btn.textContent = `Download ${label}.zip`;
+              normalFiles.push(file);
             }
-
-            btn.onclick = () => zipAndDownload(file);
-            document.getElementById('downloads').appendChild(btn);
           });
+
+          normalFiles.forEach(file => {
+            const btn = createDownloadButton(file.name.replace(/\.[^/.]+$/, ''), file);
+            downloadsDiv.appendChild(btn);
+          });
+
+          if (baseFile) {
+            const baseBtn = createWindowsInstallerButton(baseFile);
+            downloadsDiv.appendChild(baseBtn);
+          }
         })
         .catch(() => showError('Failed to load downloads.'));
+    }
+
+    function createDownloadButton(label, file) {
+      const btn = document.createElement('button');
+      btn.className = 'download-btn';
+      btn.textContent = `Download ${label}.zip`;
+      btn.onclick = () => zipAndDownload(file);
+      return btn;
+    }
+
+    function createWindowsInstallerButton(file) {
+      const btn = document.createElement('button');
+      btn.className = 'download-btn';
+      btn.innerHTML = `<img src="${winLogoUrl}" alt="Windows">Download Windows installer`;
+      btn.onclick = () => zipAndDownload(file);
+      return btn;
     }
 
     function zipAndDownload(file) {
