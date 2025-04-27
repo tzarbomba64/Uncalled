@@ -25,7 +25,6 @@
   <!-- Dependencies -->
   <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const owner = 'tzarbomba64';
@@ -38,70 +37,69 @@
       const downloadsEl = document.getElementById('downloads');
       const errorEl = document.getElementById('error');
 
-      // fetch and render README
       fetch(readmeUrl)
         .then(res => { if (!res.ok) throw new Error(res.status); return res.text(); })
         .then(md => {
           contentEl.innerHTML = marked.parse(md);
-          loadDownloadButtons();
+          listDownloads();
         })
-        .catch(err => showError('Oops, couldn\'t load the README: ' + err.message));
+        .catch(err => showError('Couldn\'t load README: ' + err.message));
 
       function showError(msg) {
         errorEl.style.display = 'block';
         errorEl.textContent = msg;
-        console.log('Error:', msg);
+        console.error(msg);
       }
 
-      // list folder entries and create buttons
-      function loadDownloadButtons() {
+      function listDownloads() {
         fetch(listApiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } })
           .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
-          .then(entries => {
-            if (!Array.isArray(entries) || !entries.length) {
-              downloadsEl.insertAdjacentHTML('beforeend', '<p>No files or folders in the list directory. Chill, there\'s nothing here.</p>');
+          .then(items => {
+            if (!Array.isArray(items) || items.length === 0) {
+              downloadsEl.insertAdjacentHTML('beforeend', '<p>No items in the list folder, chill vibes though.</p>');
               return;
             }
-            entries.forEach(entry => {
+            items.forEach(item => {
               const btn = document.createElement('button');
-              const label = entry.name.replace(/\.[^/.]+$/, '');
-              btn.textContent = `Download ${label}.zip`;
+              const name = item.name.replace(/\.[^/.]+$/, '');
+              btn.textContent = `Download ${name}.zip`;
               btn.className = 'download-btn';
-              btn.onclick = () => zipAndDownload(entry);
+              btn.onclick = () => zipAndDownload(item);
               downloadsEl.appendChild(btn);
             });
           })
-          .catch(err => showError('Couldn\'t list the directory: ' + err.message));
+          .catch(err => showError('Couldn\'t fetch list folder: ' + err.message));
       }
 
-      // recursively add files and folders into zip
       function addEntry(entry, zipObj, path = '') {
-        const apiPath = entry.type === 'dir'
-          ? `https://api.github.com/repos/${owner}/${repo}/contents/list/${path}${entry.name}?ref=${branch}`
-          : entry.download_url;
-
         if (entry.type === 'file') {
-          return fetch(apiPath)
-            .then(res => { if (!res.ok) throw new Error(res.status); return res.blob(); })
-            .then(blob => zipObj.file(path + entry.name, blob));
-        } else if (entry.type === 'dir') {
-          const folder = zipObj.folder(entry.name);
-          return fetch(apiPath, { headers: { 'Accept': 'application/vnd.github.v3+json' } })
-            .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
-            .then(children => Promise.all(children.map(child => addEntry(child, folder, path + entry.name + '/'))));
+          return fetch(entry.download_url)
+            .then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+            .then(b => zipObj.file(path + entry.name, b));
+        }
+        if (entry.type === 'dir') {
+          const dir = zipObj.folder(entry.name);
+          return fetch(`https://api.github.com/repos/${owner}/${repo}/contents/list/${path}${entry.name}?ref=${branch}`, { headers: { 'Accept': 'application/vnd.github.v3+json' } })
+            .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(children => Promise.all(children.map(c => addEntry(c, dir, path + entry.name + '/'))));
         }
       }
 
-      // create zip and trigger download via FileSaver
-      function zipAndDownload(entry) {
+      function zipAndDownload(item) {
         const zip = new JSZip();
-        addEntry(entry, zip)
+        addEntry(item, zip)
           .then(() => zip.generateAsync({ type: 'blob' }))
           .then(blob => {
-            const label = entry.name.replace(/\.[^/.]+$/, '');
-            saveAs(blob, `${label}.zip`);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${item.name.replace(/\.[^/.]+$/, '')}.zip`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
           })
-          .catch(err => showError('Zip creation failed, my bad: ' + err.message));
+          .catch(err => showError('Zip or download failed: ' + err.message));
       }
     });
   </script>
