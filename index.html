@@ -2,161 +2,139 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Uncalled - Downloads</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Uncalled README & Downloads</title>
   <style>
-    body { background: #000; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
-    h1, h2, h3 { color: #00aaff; }
+    body { background-color: #000; color: #fff; font-family: sans-serif; padding: 2rem; }
     a { color: #00aaff; }
-    pre, code { background: #111; padding: 10px; border-radius: 5px; }
-    .download-btn {
-      display: inline-flex;
-      align-items: center;
-      background-color: #00aaff;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      margin: 10px 10px 0 0;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 1rem;
-      text-decoration: none;
-    }
-    .download-btn img {
-      width: 20px;
-      height: 20px;
-      margin-right: 10px;
-    }
-    #downloads, #windows-installer {
-      margin-top: 20px;
-    }
-    #windows-installer {
-      margin-top: 100px; /* send it to the abyss */
-    }
-    .error {
-      margin-top: 20px;
-      padding: 10px;
-      background: #330000;
-      border: 1px solid #ff0000;
-      border-radius: 5px;
-      color: #ff5555;
-    }
+    h1, h2, h3, h4, h5, h6 { color: #00aaff; }
+    blockquote { border-left: 4px solid #00aaff; padding-left: 1rem; color: #ccc; }
+    code { background-color: #111; padding: 0.2em 0.4em; border-radius: 4px; }
+    pre { background-color: #111; padding: 1em; border-radius: 4px; overflow-x: auto; }
+    .download-btn { display: inline-flex; align-items: center; background-color: #00aaff; color: #fff; padding: 0.5em 1em; margin: 0.5em; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; text-decoration: none; }
+    .download-btn:hover { background-color: #0088cc; }
+    .win-logo { width: 20px; height: 20px; margin-right: 8px; }
+    .error { margin-top: 2rem; padding: 1rem; background-color: #330000; border: 1px solid #ff0000; border-radius: 4px; color: #ff5555; }
   </style>
 </head>
 <body>
 
   <div id="content">Loading README...</div>
 
-  <h2>Downloads</h2>
+  <h2 style="margin-top: 3rem;">Downloads</h2>
   <div id="downloads"></div>
-
-  <div id="windows-installer"></div>
-
   <div id="error" class="error" style="display:none;"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
+
   <script>
-    const owner = 'tzarbomba64';
-    const repo = 'Uncalled';
-    const branch = 'main';
-    const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`;
-    const listApiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/list?ref=${branch}`;
-    const winLogoUrl = 'https://i.postimg.cc/2jJkfTC9/download.png'; // custom logo
+    document.addEventListener('DOMContentLoaded', () => {
+      const owner = 'tzarbomba64';
+      const repo = 'Uncalled';
+      const branch = 'main';
+      const listApiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/list?ref=${branch}`;
+      const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`;
+      const downloadsEl = document.getElementById('downloads');
+      const errorEl = document.getElementById('error');
+      const winLogoUrl = 'https://i.postimg.cc/2jJkfTC9/download.png';
 
-    function showError(msg) {
-      const errorBox = document.getElementById('error');
-      errorBox.style.display = 'block';
-      errorBox.textContent = msg;
-      console.error(msg);
-    }
-
-    function loadReadme() {
       fetch(readmeUrl)
-        .then(res => res.text())
-        .then(md => {
-          document.getElementById('content').innerHTML = marked.parse(md);
-        })
-        .catch(() => showError('Failed to load README.'));
-    }
+        .then(res => res.ok ? res.text() : Promise.reject(res.status))
+        .then(md => document.getElementById('content').innerHTML = marked.parse(md))
+        .catch(err => showError('Failed to load README: ' + err));
 
-    function listDownloads() {
-      fetch(listApiUrl)
-        .then(res => res.json())
-        .then(files => {
-          const downloadsDiv = document.getElementById('downloads');
-          const winInstallerDiv = document.getElementById('windows-installer');
-          const normalFiles = [];
-          let baseFile = null;
+      fetch(listApiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } })
+        .then(res => res.ok ? res.json() : Promise.reject(res.status))
+        .then(listItems => setupDownloadButtons(listItems))
+        .catch(err => showError('Failed to load list folder: ' + err));
 
-          files.forEach(file => {
-            const cleanName = file.name.toLowerCase();
-            if (cleanName === 'base' || cleanName === 'base.zip') {
-              baseFile = file;
-            } else {
-              normalFiles.push(file);
-            }
-          });
+      function showError(message) {
+        errorEl.style.display = 'block';
+        errorEl.textContent = message;
+        console.error(message);
+      }
 
-          normalFiles.forEach(file => {
-            const btn = createDownloadButton(file.name.replace(/\.[^/.]+$/, ''), file);
-            downloadsDiv.appendChild(btn);
-          });
+      function setupDownloadButtons(items) {
+        let regularButtons = [];
+        let windowsInstallerButton = null;
 
-          if (baseFile) {
-            const baseBtn = createWindowsInstallerButton(baseFile);
-            winInstallerDiv.appendChild(baseBtn);
+        items.forEach(item => {
+          if (item.type !== 'file' && item.type !== 'dir') return;
+
+          const btn = document.createElement('button');
+          btn.className = 'download-btn';
+
+          if (item.name.toLowerCase() === 'base.zip') {
+            btn.innerHTML = `<img src="${winLogoUrl}" class="win-logo" alt="Windows 11 logo">Download Windows installer`;
+            windowsInstallerButton = btn;
+          } else {
+            const label = item.name.replace(/\.[^/.]+$/, '');
+            btn.textContent = `Download ${label}.zip`;
+            regularButtons.push({ btn, item });
           }
-        })
-        .catch(() => showError('Failed to load downloads.'));
-    }
 
-    function createDownloadButton(label, file) {
-      const btn = document.createElement('button');
-      btn.className = 'download-btn';
-      btn.textContent = `Download ${label}.zip`;
-      btn.onclick = () => zipAndDownload(file);
-      return btn;
-    }
-
-    function createWindowsInstallerButton(file) {
-      const btn = document.createElement('button');
-      btn.className = 'download-btn';
-      btn.innerHTML = `<img src="${winLogoUrl}" alt="Windows">Download Windows installer`;
-      btn.onclick = () => zipAndDownload(file);
-      return btn;
-    }
-
-    function zipAndDownload(file) {
-      fetch(file.download_url)
-        .then(res => {
-          if (!res.ok) throw new Error('Network response was not ok');
-          return res.blob();
-        })
-        .then(blob => {
-          const zip = new JSZip();
-          zip.file(file.name, blob);
-          return zip.generateAsync({ type: 'blob' });
-        })
-        .then(zipBlob => {
-          const url = URL.createObjectURL(zipBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          const cleanName = file.name.replace(/\.[^/.]+$/, '');
-          a.download = `${cleanName}.zip`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 10000);
-        })
-        .catch(err => {
-          console.error('Download failed:', err);
-          showError('Download failed.');
+          btn.onclick = () => zipAndDownload(item);
         });
-    }
 
-    loadReadme();
-    listDownloads();
+        regularButtons.forEach(({ btn }) => downloadsEl.appendChild(btn));
+        if (windowsInstallerButton) {
+          downloadsEl.appendChild(document.createElement('br'));
+          downloadsEl.appendChild(windowsInstallerButton);
+        }
+      }
+
+      function zipAndDownload(item) {
+        const zip = new JSZip();
+
+        if (item.type === 'file') {
+          fetch(item.download_url)
+            .then(res => res.blob())
+            .then(blob => {
+              zip.file(item.name, blob);
+              return zip.generateAsync({ type: 'blob' });
+            })
+            .then(blob => triggerDownload(blob, item.name.replace(/\.[^/.]+$/, '')))
+            .catch(err => showError('Failed to zip file: ' + err));
+        } else if (item.type === 'dir') {
+          downloadFolder(item.path, zip)
+            .then(() => zip.generateAsync({ type: 'blob' }))
+            .then(blob => triggerDownload(blob, item.name))
+            .catch(err => showError('Failed to zip folder: ' + err));
+        }
+      }
+
+      function downloadFolder(folderPath, zipInstance, subPath = '') {
+        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${folderPath}?ref=${branch}`;
+        return fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } })
+          .then(res => res.ok ? res.json() : Promise.reject(res.status))
+          .then(entries => {
+            return Promise.all(entries.map(entry => {
+              if (entry.type === 'file') {
+                return fetch(entry.download_url)
+                  .then(res => res.blob())
+                  .then(blob => {
+                    zipInstance.file(subPath + entry.name, blob);
+                  });
+              } else if (entry.type === 'dir') {
+                const folder = zipInstance.folder(entry.name);
+                return downloadFolder(entry.path, folder, subPath + entry.name + '/');
+              }
+            }));
+          });
+      }
+
+      function triggerDownload(blob, name) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${name}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+    });
   </script>
 
 </body>
